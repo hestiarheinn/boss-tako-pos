@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boss Tako POS - Orders</title>
+
+  <link rel="icon" type="image/png" href="icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="logo">
+    <img src="icon.png" alt="Boss Tako Logo" class="brand-logo">
+    <span>Boss Tako <strong>POS</strong></span>
+  </div>
+  <div class="time-display" id="currentTime">--:--:--</div>
+  <nav class="nav-links">
+    <a href="index.html" class="active"><i class="fa-solid fa-cart-shopping"></i> Orders</a>
+    <a href="products.html"><i class="fa-solid fa-box-open"></i> Products</a>
+    <a href="sales.html"><i class="fa-solid fa-chart-line"></i> Sales</a>
+  </nav>
+</header>
+
+<main class="app-container">
+
+  <!-- LEFT: CREATE ORDER -->
+  <section class="card">
+    <div class="card-header">
+      <h2><i class="fa-solid fa-cart-shopping"></i> New Order</h2>
+    </div>
+
+    <div class="card-body">
+      <!-- CUSTOMER INFO -->
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="name">Customer Name</label>
+          <input type="text" id="name" placeholder="e.g. Taro Yamada">
+        </div>
+
+        <div class="input-group">
+          <label for="phone">Phone</label>
+          <input type="text" id="phone" placeholder="09xxxxxxxxx">
+        </div>
+
+        <div class="input-group">
+          <label for="orderType">Order Type</label>
+          <select id="orderType">
+            <option value="Pickup">Pickup</option>
+            <option value="Delivery">Delivery</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="orderDate">Schedule Date</label>
+          <input type="date" id="orderDate">
+        </div>
+
+        <div class="input-group">
+          <label for="orderTime">Schedule Time</label>
+          <input type="time" id="orderTime">
+        </div>
+
+        <div class="input-group" id="addressField" style="display:none;">
+          <label for="address">Address</label>
+          <input type="text" id="address" placeholder="Delivery address">
+        </div>
+
+        <div class="input-group" id="deliveryField" style="display:none;">
+          <label for="deliveryFee">Delivery Fee</label>
+          <select id="deliveryFee">
+            <option value="30">₱30</option>
+            <option value="40">₱40</option>
+            <option value="50">₱50</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- MENU SELECTION -->
+      <div class="menu-section">
+        <h3><i class="fa-solid fa-list-check"></i> Menu</h3>
+        <div id="menu" class="menu-grid"></div>
+      </div>
+
+      <!-- SELECTED CART ITEMS -->
+      <div id="items" class="items-list"></div>
+
+      <!-- CHECKOUT SECTION -->
+      <div class="checkout-section">
+        <select id="payment">
+          <option value="Cash">Cash</option>
+          <option value="GCash">GCash</option>
+        </select>
+        <div>₱ <span id="total">0.00</span></div>
+      </div>
+
+      <button onclick="saveOrder()" class="btn btn-primary">
+        <i class="fa-solid fa-paper-plane"></i> Save Order
+      </button>
+    </div>
+  </section>
+
+  <!-- RIGHT: COMPACT ORDER QUEUE -->
+  <section class="card">
+    <div class="card-header">
+      <h2><i class="fa-solid fa-clock"></i> Order Queue</h2>
+    </div>
+    <div class="card-body">
+      <div id="pendingOrders" class="order-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
