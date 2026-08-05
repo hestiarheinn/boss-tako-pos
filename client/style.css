@@ -507,7 +507,113 @@ input:focus, select:focus {
   background-color: var(--color-subtle);
 }
 
-/* RESPONSIVE */
+/* --------------------------------------------------------------------------
+   7. MENU SELECTION & CART LIST (RESPONSIVE FIX)
+   -------------------------------------------------------------------------- */
+.menu-section h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.menu-grid {
+  display: grid;
+  /* Uses min(110px, 100%) so items shrink safely on smaller screens */
+  grid-template-columns: repeat(auto-fill, minmax(min(110px, 100%), 1fr));
+  gap: 0.6rem;
+}
+
+.menu-item {
+  background-color: var(--color-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  word-break: break-word; /* Prevents long product titles from clipping */
+}
+
+.menu-item:hover {
+  background-color: #FFFFFF;
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-item strong {
+  display: block;
+  font-size: 0.825rem;
+  color: var(--color-dark);
+  margin-bottom: 0.25rem;
+  line-height: 1.25;
+}
+
+.menu-item div {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Cart Items Container */
+.items-list {
+  background-color: var(--color-subtle);
+  border: 1px dashed var(--color-border-dark);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  min-height: 90px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.item-row div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.item-row button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border-dark);
+  background: var(--color-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-row button:hover {
+  background: var(--color-dark);
+  color: #FFFFFF;
+  border-color: var(--color-dark);
+}
+
+/* --------------------------------------------------------------------------
+   11. RESPONSIVE MEDIA QUERIES (UPDATED FOR MOBILE ENHANCEMENTS)
+   -------------------------------------------------------------------------- */
 @media (max-width: 992px) {
   .app-container {
     grid-template-columns: 1fr;
@@ -520,7 +626,23 @@ input:focus, select:focus {
     gap: 0.75rem;
     padding: 1rem;
   }
-  .app-container, .page-container {
-    padding: 1rem;
+  
+  .app-container,
+  .page-container {
+    padding: 0.75rem;
+  }
+
+  /* 2-column menu grid layout optimized for smartphone screens */
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .menu-item {
+    padding: 0.6rem 0.4rem;
+  }
+
+  .input-grid {
+    grid-template-columns: 1fr;
   }
 }
