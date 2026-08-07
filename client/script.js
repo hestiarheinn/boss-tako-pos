@@ -176,17 +176,45 @@ async function loadOrders() {
   const pending = document.getElementById("pendingOrders");
   pending.innerHTML = "";
 
+  if (orders.length === 0) {
+    pending.innerHTML = `<div class="empty-state">No pending orders</div>`;
+    return;
+  }
+
   orders.forEach(o => {
     const time = formatTime12h(o.scheduled_at);
 
+    const addressLine = o.order_type === "Delivery" && o.address
+      ? `<div>📍 ${o.address}</div>`
+      : "";
+
     pending.innerHTML += `
       <div class="order-card">
-        <strong>${o.customer_name}</strong>
+        <div class="order-card-header">
+          <strong>${o.customer_name}</strong>
+          <span class="order-type-badge">${o.order_type}</span>
+        </div>
         <div>🕒 ${time}</div>
-        <div>${o.items || ""}</div>
+        ${o.phone ? `<div>📞 ${o.phone}</div>` : ""}
+        ${addressLine}
+        <div class="order-items">${o.items || ""}</div>
+        <div class="order-footer">
+          <span>${o.payment} · ₱${parseFloat(o.total).toFixed(2)}</span>
+          <button onclick="completeOrder(${o.id})" class="btn-complete">
+            <i class="fa-solid fa-check"></i> Complete
+          </button>
+        </div>
       </div>
     `;
   });
+}
+
+/* ===============================
+COMPLETE ORDER
+================================= */
+async function completeOrder(id) {
+  await fetch(`${API}/orders/${id}`, { method: "PUT" });
+  loadOrders();
 }
 
 /* ===============================
