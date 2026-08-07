@@ -19,7 +19,7 @@ const db = mysql.createConnection({
   port: process.env.DB_PORT || 59587,
   ssl: { rejectUnauthorized: false },
   connectTimeout: 10000,
-  dateStrings: true   // ✅ ADDED: return DATETIME columns as plain strings, not JS Date objects
+  dateStrings: true   // ✅ return DATETIME columns as plain strings, not JS Date objects
 });
 
 db.connect((err) => {
@@ -117,7 +117,7 @@ app.post("/orders", (req, res) => {
       deliveryFee || 0,
       payment || "Cash",
       total,
-      scheduledAt || null   // ✅ FIXED: pass the plain string through, no Date() wrapping
+      scheduledAt || null   // ✅ pass the plain string through, no Date() wrapping
     ],
     (err, result) => {
       if (err) return res.status(500).json(err);
@@ -194,6 +194,40 @@ app.get("/orders", (req, res) => {
 });
 
 /* ===============================
+GET SALES (Completed Orders)
+================================= */
+
+app.get("/sales", (req, res) => {
+  const sql = `
+    SELECT 
+      o.*,
+      GROUP_CONCAT(
+        CONCAT(
+          oi.item_name,
+          ' x',
+          oi.quantity,
+          IF(oi.notes IS NOT NULL AND oi.notes != '',
+            CONCAT(' (Note: ', oi.notes, ')'),
+            ''
+          )
+        )
+        SEPARATOR ', '
+      ) AS items
+
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.status='Completed'
+    GROUP BY o.id
+    ORDER BY o.created_at DESC
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json(result);
+  });
+});
+
+/* ===============================
 COMPLETE ORDER
 ================================= */
 
@@ -204,6 +238,26 @@ app.put("/orders/:id", (req, res) => {
     (err) => {
       if (err) return res.status(500).json(err);
       res.json({ message: "Order Completed" });
+    }
+  );
+});
+
+/* ===============================
+CANCEL ORDER
+================================= */
+
+app.put("/orders/:id/cancel", (req, res) => {
+  db.query(
+    "UPDATE orders SET status='Cancelled' WHERE id=?",
+    [req.params.id],
+    (err, result) => {
+      if (err) return res.status(500).json(err);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      res.json({ message: "Order Cancelled" });
     }
   );
 });
