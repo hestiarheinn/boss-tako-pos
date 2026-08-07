@@ -18,7 +18,8 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME || "railway",
   port: process.env.DB_PORT || 59587,
   ssl: { rejectUnauthorized: false },
-  connectTimeout: 10000
+  connectTimeout: 10000,
+  dateStrings: true   // ✅ ADDED: return DATETIME columns as plain strings, not JS Date objects
 });
 
 db.connect((err) => {
@@ -116,7 +117,7 @@ app.post("/orders", (req, res) => {
       deliveryFee || 0,
       payment || "Cash",
       total,
-      scheduledAt ? new Date(scheduledAt) : null
+      scheduledAt || null   // ✅ FIXED: pass the plain string through, no Date() wrapping
     ],
     (err, result) => {
       if (err) return res.status(500).json(err);
@@ -156,7 +157,7 @@ app.post("/orders", (req, res) => {
 });
 
 /* ===============================
-GET PENDING ORDERS (FIXED)
+GET PENDING ORDERS
 ================================= */
 
 app.get("/orders", (req, res) => {

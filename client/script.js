@@ -2,7 +2,7 @@ const API = "https://boss-tako-api.onrender.com";
 let cart = [];
 
 /* ===============================
-SAVE ORDER (FIXED)
+SAVE ORDER
 ================================= */
 async function saveOrder() {
   const name = document.getElementById("name").value.trim();
@@ -25,9 +25,9 @@ async function saveOrder() {
   const date = document.getElementById("orderDate").value;
   const time = document.getElementById("orderTime").value;
 
-  // ✅ CRITICAL FIX
+  // ✅ FIXED: send plain local date/time string, no UTC conversion
   const scheduledAt = (date && time)
-    ? new Date(`${date}T${time}`).toISOString()
+    ? `${date} ${time}:00`
     : null;
 
   const itemsWithNotes = cart.map(item => ({
@@ -57,7 +57,26 @@ async function saveOrder() {
 }
 
 /* ===============================
-LOAD ORDERS (FINAL TIME FIX)
+TIME FORMAT HELPER
+================================= */
+function formatTime12h(dateTimeStr) {
+  if (!dateTimeStr) return "ASAP";
+
+  // handles "2024-01-15 13:30:00" or "2024-01-15T13:30:00"
+  const timePart = dateTimeStr.includes("T")
+    ? dateTimeStr.split("T")[1]
+    : dateTimeStr.split(" ")[1];
+
+  if (!timePart) return "ASAP";
+
+  let [h, m] = timePart.split(":").map(Number);
+  const ampm = h >= 12 ? "pm" : "am";
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")}${ampm}`;
+}
+
+/* ===============================
+LOAD ORDERS
 ================================= */
 async function loadOrders() {
   const res = await fetch(`${API}/orders`);
@@ -67,13 +86,7 @@ async function loadOrders() {
   pending.innerHTML = "";
 
   orders.forEach(o => {
-    const time = o.scheduled_at
-      ? new Date(o.scheduled_at).toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true
-        }).replace("AM", "am").replace("PM", "pm")
-      : "ASAP";
+    const time = formatTime12h(o.scheduled_at);
 
     pending.innerHTML += `
       <div class="order-card">
