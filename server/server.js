@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 /* ===============================
-   DATABASE CONNECTION
+DATABASE CONNECTION
 ================================= */
 
 const db = mysql.createConnection({
@@ -30,10 +30,9 @@ db.connect((err) => {
 });
 
 /* ===============================
-   PRODUCTS
+PRODUCTS
 ================================= */
 
-// GET PRODUCTS
 app.get("/products", (req, res) => {
   db.query("SELECT * FROM products ORDER BY id DESC", (err, result) => {
     if (err) return res.status(500).json(err);
@@ -41,7 +40,6 @@ app.get("/products", (req, res) => {
   });
 });
 
-// ADD PRODUCT
 app.post("/products", (req, res) => {
   const { name, price } = req.body;
 
@@ -63,22 +61,18 @@ app.post("/products", (req, res) => {
   );
 });
 
-// DELETE PRODUCT
 app.delete("/products/:id", (req, res) => {
   db.query("DELETE FROM products WHERE id=?", [req.params.id], (err) => {
     if (err) return res.status(500).json(err);
-
     res.json({ message: "Product deleted" });
   });
 });
 
 /* ===============================
-   CREATE ORDER
+CREATE ORDER
 ================================= */
 
 app.post("/orders", (req, res) => {
-  console.log("📦 INCOMING ORDER:", req.body);
-
   const {
     name,
     phone,
@@ -92,9 +86,7 @@ app.post("/orders", (req, res) => {
   } = req.body;
 
   if (!name || !total) {
-    return res.status(400).json({
-      error: "Missing required fields"
-    });
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
   const sql = `
@@ -124,16 +116,12 @@ app.post("/orders", (req, res) => {
       deliveryFee || 0,
       payment || "Cash",
       total,
-      scheduledAt ? new Date(scheduledAt) : null // ✅ FIXED TIME INSERT
+      scheduledAt ? new Date(scheduledAt) : null
     ],
     (err, result) => {
-      if (err) {
-        console.error("❌ ORDER ERROR:", err);
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
 
       const orderId = result.insertId;
-      console.log("✅ ORDER CREATED:", orderId);
 
       if (!items || items.length === 0) {
         return res.json({ message: "Order Saved" });
@@ -160,11 +148,7 @@ app.post("/orders", (req, res) => {
       ]);
 
       db.query(itemSql, [values], (err) => {
-        if (err) {
-          console.error("❌ ITEM ERROR:", err);
-          return res.status(500).json(err);
-        }
-
+        if (err) return res.status(500).json(err);
         res.json({ message: "Order Saved" });
       });
     }
@@ -172,17 +156,14 @@ app.post("/orders", (req, res) => {
 });
 
 /* ===============================
-   GET PENDING ORDERS
+GET PENDING ORDERS (FIXED)
 ================================= */
 
 app.get("/orders", (req, res) => {
   const sql = `
-    SELECT
+    SELECT 
       o.*,
-
-      -- ✅ FIX TIME (convert to PH/local timezone)
-      DATE_FORMAT(CONVERT_TZ(o.scheduled_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS scheduled_at,
-
+      o.scheduled_at,
       COALESCE(o.scheduled_at, o.created_at) AS queue_time,
 
       GROUP_CONCAT(
@@ -206,17 +187,13 @@ app.get("/orders", (req, res) => {
   `;
 
   db.query(sql, (err, result) => {
-    if (err) {
-      console.error("❌ ORDERS ERROR:", err);
-      return res.status(500).json(err);
-    }
-
+    if (err) return res.status(500).json(err);
     res.json(result);
   });
 });
 
 /* ===============================
-   COMPLETE ORDER
+COMPLETE ORDER
 ================================= */
 
 app.put("/orders/:id", (req, res) => {
@@ -225,79 +202,13 @@ app.put("/orders/:id", (req, res) => {
     [req.params.id],
     (err) => {
       if (err) return res.status(500).json(err);
-
-      console.log("✅ COMPLETED ORDER:", req.params.id);
-
       res.json({ message: "Order Completed" });
     }
   );
 });
 
 /* ===============================
-   SALES HISTORY
-================================= */
-
-app.get("/sales", (req, res) => {
-  const sql = `
-    SELECT
-      o.*,
-
-      DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS created_at,
-
-      GROUP_CONCAT(
-        CONCAT(
-          oi.item_name,
-          ' x',
-          oi.quantity,
-          IF(oi.notes IS NOT NULL AND oi.notes != '',
-            CONCAT(' (Note: ', oi.notes, ')'),
-            ''
-          )
-        )
-        SEPARATOR ', '
-      ) AS items
-
-    FROM orders o
-    LEFT JOIN order_items oi ON o.id = oi.order_id
-    WHERE o.status='Completed'
-    GROUP BY o.id
-    ORDER BY o.created_at DESC
-  `;
-
-  db.query(sql, (err, result) => {
-    if (err) {
-      console.error("❌ SALES ERROR:", err);
-      return res.status(500).json(err);
-    }
-
-    console.log("💰 SALES SENT:", result.length);
-
-    res.json(result);
-  });
-});
-
-/* ===============================
-   DASHBOARD
-================================= */
-
-app.get("/dashboard", (req, res) => {
-  const sql = `
-    SELECT
-      COUNT(*) AS totalOrders,
-      IFNULL(SUM(total),0) AS totalSales
-    FROM orders
-    WHERE DATE(created_at)=CURDATE()
-  `;
-
-  db.query(sql, (err, result) => {
-    if (err) return res.status(500).json(err);
-
-    res.json(result[0]);
-  });
-});
-
-/* ===============================
-   START SERVER
+START SERVER
 ================================= */
 
 const PORT = process.env.PORT || 3001;
