@@ -86,6 +86,9 @@ document.getElementById("orderType").addEventListener("change", (e) => {
   renderCart();
 });
 
+// ✅ FIX: recalculate total whenever the delivery fee dropdown changes
+document.getElementById("deliveryFee").addEventListener("change", renderCart);
+
 /* ===============================
 SAVE ORDER
 ================================= */
@@ -200,9 +203,14 @@ async function loadOrders() {
         <div class="order-items">${o.items || ""}</div>
         <div class="order-footer">
           <span>${o.payment} · ₱${parseFloat(o.total).toFixed(2)}</span>
-          <button onclick="completeOrder(${o.id})" class="btn-complete">
-            <i class="fa-solid fa-check"></i> Complete
-          </button>
+          <div class="order-footer-actions">
+            <button onclick="completeOrder(${o.id})" class="btn-complete">
+              <i class="fa-solid fa-check"></i> Complete
+            </button>
+            <button onclick="cancelOrder(${o.id})" class="btn-cancel">
+              <i class="fa-solid fa-xmark"></i> Cancel
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -214,6 +222,15 @@ COMPLETE ORDER
 ================================= */
 async function completeOrder(id) {
   await fetch(`${API}/orders/${id}`, { method: "PUT" });
+  loadOrders();
+}
+
+/* ===============================
+CANCEL ORDER
+================================= */
+async function cancelOrder(id) {
+  if (!confirm("Cancel this order?")) return;
+  await fetch(`${API}/orders/${id}/cancel`, { method: "PUT" });
   loadOrders();
 }
 
