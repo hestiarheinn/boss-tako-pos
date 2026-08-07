@@ -118,7 +118,8 @@ async function saveOrder() {
 
   const date = document.getElementById("orderDate").value;
   const time = document.getElementById("orderTime").value;
-  const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
+  // Replace 'T' with a space so MySQL stores it directly as local wall-clock time
+const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
 
   // Attach notes to each item in the cart array
   const itemsWithNotes = cart.map(item => ({
