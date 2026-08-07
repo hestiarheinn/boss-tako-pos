@@ -17,6 +17,7 @@ async function loadMenu() {
         </div>
       `;
     });
+
   } catch (err) {
     console.error("Error loading menu:", err);
   }
@@ -61,20 +62,26 @@ function renderCart() {
   });
 
   const type = document.getElementById("orderType").value;
-  const delivery = type === "Delivery" ? Number(document.getElementById("deliveryFee").value) : 0;
+  const delivery = type === "Delivery"
+    ? Number(document.getElementById("deliveryFee").value)
+    : 0;
+
   document.getElementById("total").innerText = (subtotal + delivery).toFixed(2);
 }
 
 /* EVENT LISTENERS */
 document.getElementById("orderType").addEventListener("change", () => {
   const type = document.getElementById("orderType").value;
-  document.getElementById("addressField").style.display = type === "Delivery" ? "block" : "none";
-  document.getElementById("deliveryField").style.display = type === "Delivery" ? "block" : "none";
+  document.getElementById("addressField").style.display =
+    type === "Delivery" ? "block" : "none";
+  document.getElementById("deliveryField").style.display =
+    type === "Delivery" ? "block" : "none";
   renderCart();
 });
 
 document.getElementById("deliveryFee").addEventListener("change", renderCart);
 
+/* INPUT ERROR HANDLING */
 function showError(id) {
   const input = document.getElementById(id);
   if (input) {
@@ -103,25 +110,37 @@ async function saveOrder() {
   const orderType = document.getElementById("orderType").value;
   const address = document.getElementById("address").value.trim();
   const payment = document.getElementById("payment").value;
-  const notes = document.getElementById("itemNotes") ? document.getElementById("itemNotes").value.trim() : "";
+  const notes = document.getElementById("itemNotes")
+    ? document.getElementById("itemNotes").value.trim()
+    : "";
 
   let valid = true;
   if (!name) { showError("name"); valid = false; }
-  if (cart.length === 0) { document.getElementById("items").style.border = "2px solid red"; valid = false; }
-  if (orderType === "Delivery" && !address) { showError("address"); valid = false; }
+  if (cart.length === 0) {
+    document.getElementById("items").style.border = "2px solid red";
+    valid = false;
+  }
+  if (orderType === "Delivery" && !address) {
+    showError("address");
+    valid = false;
+  }
 
   if (!valid) return;
 
   let subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const deliveryFee = orderType === "Delivery" ? Number(document.getElementById("deliveryFee").value) : 0;
+  const deliveryFee = orderType === "Delivery"
+    ? Number(document.getElementById("deliveryFee").value)
+    : 0;
+
   const total = subtotal + deliveryFee;
 
   const date = document.getElementById("orderDate").value;
   const time = document.getElementById("orderTime").value;
-  // Replace 'T' with a space so MySQL stores it directly as local wall-clock time
-const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
 
-  // Attach notes to each item in the cart array
+  const scheduledAt = (date && time)
+    ? `${date} ${time}:00`
+    : null;
+
   const itemsWithNotes = cart.map(item => ({
     ...item,
     notes: notes
@@ -130,20 +149,20 @@ const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
   await fetch(`${API}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      name, 
-      phone, 
-      orderType, 
-      address, 
-      deliveryFee, 
-      payment, 
-      total, 
-      items: itemsWithNotes, 
-      scheduledAt 
+    body: JSON.stringify({
+      name,
+      phone,
+      orderType,
+      address,
+      deliveryFee,
+      payment,
+      total,
+      items: itemsWithNotes,
+      scheduledAt
     })
   });
 
-  // Reset Inputs
+  // RESET
   cart = [];
   document.getElementById("name").value = "";
   document.getElementById("phone").value = "";
@@ -153,6 +172,7 @@ const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
   if (document.getElementById("itemNotes")) {
     document.getElementById("itemNotes").value = "";
   }
+
   document.getElementById("orderType").value = "Pickup";
   document.getElementById("payment").value = "Cash";
   document.getElementById("addressField").style.display = "none";
@@ -180,16 +200,25 @@ async function loadOrders() {
 
     orders.forEach(o => {
       if (o.status !== "Pending") return;
-      
-      const time = o.scheduled_at 
-        ? new Date(o.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) 
+
+      // ✅ FIXED TIME (NO SECONDS, NO SHIFT)
+      const time = o.scheduled_at
+        ? o.scheduled_at.split(" ")[1].slice(0, 5)
         : "ASAP";
 
-      const location = o.order_type === "Delivery" 
-        ? (o.address || "No address provided") 
+      const location = o.order_type === "Delivery"
+        ? (o.address || "No address provided")
         : "Store Pickup";
 
       const phone = o.phone || "No contact number";
+
+      const itemsDisplay = Array.isArray(o.items)
+        ? o.items.map(i => `${i.itemName} x${i.qty}`).join(", ")
+        : (o.items || "No items listed");
+
+      const notes = Array.isArray(o.items)
+        ? (o.items[0]?.notes || "None")
+        : "None";
 
       pending.innerHTML += `
         <div class="order-card">
@@ -200,18 +229,22 @@ async function loadOrders() {
           
           <p>📞 <strong>Phone:</strong> ${phone}</p>
           <p>🛵 <strong>Type & Location:</strong> ${o.order_type} — ${location}</p>
-          <p>🍱 <strong>Items & Flavors:</strong> ${o.items || 'No items listed'}</p>
-          <p>💳 <strong>Payment:</strong> ${o.payment} | <strong>Total: ₱${Number(o.total).toFixed(2)}</strong></p>
+          <p>🍱 <strong>Items:</strong> ${itemsDisplay}</p>
+          <p>📝 <strong>Notes:</strong> ${notes}</p>
+          <p>💳 <strong>Payment:</strong> ${o.payment}</p>
+          <p><strong>💰 ₱${Number(o.total).toFixed(2)}</strong></p>
 
           <button onclick="completeOrder(${o.id})">Complete Order</button>
         </div>
       `;
     });
+
   } catch (err) {
     console.error("Failed to load pending orders:", err);
   }
 }
 
+/* COMPLETE ORDER */
 async function completeOrder(id) {
   await fetch(`${API}/orders/${id}`, { method: "PUT" });
   loadOrders();
@@ -224,5 +257,10 @@ renderCart();
 
 setInterval(() => {
   const el = document.getElementById("currentTime");
-  if (el) el.innerText = new Date().toLocaleTimeString();
+  if (el) {
+    el.innerText = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
 }, 1000);
