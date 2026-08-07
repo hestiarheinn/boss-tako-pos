@@ -2,6 +2,91 @@ const API = "https://boss-tako-api.onrender.com";
 let cart = [];
 
 /* ===============================
+LOAD MENU
+================================= */
+async function loadMenu() {
+  try {
+    const res = await fetch(`${API}/products`);
+    const products = await res.json();
+    const menu = document.getElementById("menu");
+    menu.innerHTML = "";
+
+    products.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "menu-item";
+      div.innerHTML = `
+        <strong>${p.name}</strong>
+        <div>₱${parseFloat(p.price).toFixed(2)}</div>
+      `;
+      div.onclick = () => addToCart(p);
+      menu.appendChild(div);
+    });
+  } catch (err) {
+    console.error("Failed to load menu:", err);
+  }
+}
+
+/* ===============================
+CART LOGIC
+================================= */
+function addToCart(product) {
+  const existing = cart.find(item => item.itemName === product.name);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({
+      itemName: product.name,
+      price: parseFloat(product.price),
+      qty: 1
+    });
+  }
+  renderCart();
+}
+
+function removeFromCart(index) {
+  cart.splice(index, 1);
+  renderCart();
+}
+
+function renderCart() {
+  const itemsDiv = document.getElementById("items");
+  itemsDiv.innerHTML = "";
+
+  let subtotal = 0;
+
+  cart.forEach((item, index) => {
+    subtotal += item.price * item.qty;
+    itemsDiv.innerHTML += `
+      <div class="cart-item">
+        <span>${item.itemName} x${item.qty}</span>
+        <span>₱${(item.price * item.qty).toFixed(2)}</span>
+        <button onclick="removeFromCart(${index})" class="btn-icon">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+  });
+
+  const orderType = document.getElementById("orderType").value;
+  const deliveryFee = orderType === "Delivery"
+    ? Number(document.getElementById("deliveryFee").value)
+    : 0;
+
+  const total = subtotal + deliveryFee;
+  document.getElementById("total").innerText = total.toFixed(2);
+}
+
+/* ===============================
+ORDER TYPE TOGGLE (show/hide address & delivery fee)
+================================= */
+document.getElementById("orderType").addEventListener("change", (e) => {
+  const isDelivery = e.target.value === "Delivery";
+  document.getElementById("addressField").style.display = isDelivery ? "flex" : "none";
+  document.getElementById("deliveryField").style.display = isDelivery ? "flex" : "none";
+  renderCart();
+});
+
+/* ===============================
 SAVE ORDER
 ================================= */
 async function saveOrder() {
@@ -25,7 +110,6 @@ async function saveOrder() {
   const date = document.getElementById("orderDate").value;
   const time = document.getElementById("orderTime").value;
 
-  // ✅ FIXED: send plain local date/time string, no UTC conversion
   const scheduledAt = (date && time)
     ? `${date} ${time}:00`
     : null;
@@ -54,6 +138,14 @@ async function saveOrder() {
   cart = [];
   renderCart();
   loadOrders();
+
+  // clear form
+  document.getElementById("name").value = "";
+  document.getElementById("phone").value = "";
+  document.getElementById("address").value = "";
+  document.getElementById("itemNotes").value = "";
+  document.getElementById("orderDate").value = "";
+  document.getElementById("orderTime").value = "";
 }
 
 /* ===============================
@@ -62,7 +154,6 @@ TIME FORMAT HELPER
 function formatTime12h(dateTimeStr) {
   if (!dateTimeStr) return "ASAP";
 
-  // handles "2024-01-15 13:30:00" or "2024-01-15T13:30:00"
   const timePart = dateTimeStr.includes("T")
     ? dateTimeStr.split("T")[1]
     : dateTimeStr.split(" ")[1];
@@ -97,3 +188,17 @@ async function loadOrders() {
     `;
   });
 }
+
+/* ===============================
+CLOCK
+================================= */
+setInterval(() => {
+  const el = document.getElementById("currentTime");
+  if (el) el.innerText = new Date().toLocaleTimeString();
+}, 1000);
+
+/* ===============================
+INIT
+================================= */
+loadMenu();
+loadOrders();
