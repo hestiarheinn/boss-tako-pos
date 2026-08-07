@@ -179,15 +179,30 @@ async function loadOrders() {
 
     orders.forEach(o => {
       if (o.status !== "Pending") return;
-      const time = o.scheduled_at ? new Date(o.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "ASAP";
+      
+      const time = o.scheduled_at 
+        ? new Date(o.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) 
+        : "ASAP";
+
+      const location = o.order_type === "Delivery" 
+        ? (o.address || "No address provided") 
+        : "Store Pickup";
+
+      const phone = o.phone || "No contact number";
 
       pending.innerHTML += `
         <div class="order-card">
-          <strong>👤 ${o.customer_name} <span>🕒 ${time}</span></strong>
-          <p>🍱 ${o.items || 'No items listed'}</p>
-          <p>🛵 ${o.order_type} ${o.order_type === "Delivery" ? `(${o.address})` : ''}</p>
-          <p>💳 ${o.payment} | <strong>₱${Number(o.total).toFixed(2)}</strong></p>
-          <button onclick="completeOrder(${o.id})">Complete</button>
+          <div class="order-header">
+            <strong>👤 ${o.customer_name}</strong>
+            <span class="order-time">🕒 ${time}</span>
+          </div>
+          
+          <p>📞 <strong>Phone:</strong> ${phone}</p>
+          <p>🛵 <strong>Type & Location:</strong> ${o.order_type} — ${location}</p>
+          <p>🍱 <strong>Items & Flavors:</strong> ${o.items || 'No items listed'}</p>
+          <p>💳 <strong>Payment:</strong> ${o.payment} | <strong>Total: ₱${Number(o.total).toFixed(2)}</strong></p>
+
+          <button onclick="completeOrder(${o.id})">Complete Order</button>
         </div>
       `;
     });
