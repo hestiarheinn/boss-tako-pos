@@ -17,9 +17,7 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD || "DITjlmOrCCTYkRkIUFviLSZOQFOEJIJf",
   database: process.env.DB_NAME || "railway",
   port: process.env.DB_PORT || 59587,
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ssl: { rejectUnauthorized: false },
   connectTimeout: 10000
 });
 
@@ -48,19 +46,14 @@ app.post("/products", (req, res) => {
   const { name, price } = req.body;
 
   if (!name || !price) {
-    return res.status(400).json({
-      error: "Missing fields"
-    });
+    return res.status(400).json({ error: "Missing fields" });
   }
 
   db.query(
     "INSERT INTO products (name,price) VALUES (?,?)",
     [name, price],
     (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
 
       res.json({
         message: "Product added",
@@ -75,9 +68,7 @@ app.delete("/products/:id", (req, res) => {
   db.query("DELETE FROM products WHERE id=?", [req.params.id], (err) => {
     if (err) return res.status(500).json(err);
 
-    res.json({
-      message: "Product deleted"
-    });
+    res.json({ message: "Product deleted" });
   });
 });
 
@@ -133,7 +124,7 @@ app.post("/orders", (req, res) => {
       deliveryFee || 0,
       payment || "Cash",
       total,
-      scheduledAt || null
+      scheduledAt ? new Date(scheduledAt) : null // ✅ FIXED TIME INSERT
     ],
     (err, result) => {
       if (err) {
@@ -142,13 +133,10 @@ app.post("/orders", (req, res) => {
       }
 
       const orderId = result.insertId;
-
       console.log("✅ ORDER CREATED:", orderId);
 
       if (!items || items.length === 0) {
-        return res.json({
-          message: "Order Saved"
-        });
+        return res.json({ message: "Order Saved" });
       }
 
       const itemSql = `
@@ -177,9 +165,7 @@ app.post("/orders", (req, res) => {
           return res.status(500).json(err);
         }
 
-        res.json({
-          message: "Order Saved"
-        });
+        res.json({ message: "Order Saved" });
       });
     }
   );
@@ -192,25 +178,30 @@ app.post("/orders", (req, res) => {
 app.get("/orders", (req, res) => {
   const sql = `
     SELECT
-      orders.*,
-      COALESCE(
-        orders.scheduled_at,
-        orders.created_at
-      ) AS queue_time,
+      o.*,
+
+      -- ✅ FIX TIME (convert to PH/local timezone)
+      DATE_FORMAT(CONVERT_TZ(o.scheduled_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS scheduled_at,
+
+      COALESCE(o.scheduled_at, o.created_at) AS queue_time,
+
       GROUP_CONCAT(
         CONCAT(
-          order_items.item_name,
+          oi.item_name,
           ' x',
-          order_items.quantity,
-          IF(order_items.notes IS NOT NULL AND order_items.notes != '', CONCAT(' (Note: ', order_items.notes, ')'), '')
+          oi.quantity,
+          IF(oi.notes IS NOT NULL AND oi.notes != '',
+            CONCAT(' (Note: ', oi.notes, ')'),
+            ''
+          )
         )
         SEPARATOR ', '
       ) AS items
-    FROM orders
-    LEFT JOIN order_items
-      ON orders.id = order_items.order_id
-    WHERE orders.status='Pending'
-    GROUP BY orders.id
+
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.status='Pending'
+    GROUP BY o.id
     ORDER BY queue_time ASC
   `;
 
@@ -233,16 +224,11 @@ app.put("/orders/:id", (req, res) => {
     "UPDATE orders SET status='Completed' WHERE id=?",
     [req.params.id],
     (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
 
       console.log("✅ COMPLETED ORDER:", req.params.id);
 
-      res.json({
-        message: "Order Completed"
-      });
+      res.json({ message: "Order Completed" });
     }
   );
 });
@@ -254,22 +240,28 @@ app.put("/orders/:id", (req, res) => {
 app.get("/sales", (req, res) => {
   const sql = `
     SELECT
-      orders.*,
+      o.*,
+
+      DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS created_at,
+
       GROUP_CONCAT(
         CONCAT(
-          order_items.item_name,
+          oi.item_name,
           ' x',
-          order_items.quantity,
-          IF(order_items.notes IS NOT NULL AND order_items.notes != '', CONCAT(' (Note: ', order_items.notes, ')'), '')
+          oi.quantity,
+          IF(oi.notes IS NOT NULL AND oi.notes != '',
+            CONCAT(' (Note: ', oi.notes, ')'),
+            ''
+          )
         )
         SEPARATOR ', '
       ) AS items
-    FROM orders
-    LEFT JOIN order_items
-      ON orders.id = order_items.order_id
-    WHERE orders.status='Completed'
-    GROUP BY orders.id
-    ORDER BY orders.created_at DESC
+
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.status='Completed'
+    GROUP BY o.id
+    ORDER BY o.created_at DESC
   `;
 
   db.query(sql, (err, result) => {
