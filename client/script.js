@@ -1,7 +1,9 @@
 const API = "https://boss-tako-api.onrender.com";
 let cart = [];
 
-/* MENU MANAGEMENT */
+/* ===============================
+   MENU MANAGEMENT
+================================= */
 async function loadMenu() {
   try {
     const res = await fetch(`${API}/products`);
@@ -17,13 +19,14 @@ async function loadMenu() {
         </div>
       `;
     });
-
   } catch (err) {
     console.error("Error loading menu:", err);
   }
 }
 
-/* CART MANAGEMENT */
+/* ===============================
+   CART MANAGEMENT
+================================= */
 function addToCart(id, name, price) {
   const existing = cart.find(i => i.id === id);
   if (existing) {
@@ -69,65 +72,26 @@ function renderCart() {
   document.getElementById("total").innerText = (subtotal + delivery).toFixed(2);
 }
 
-/* EVENT LISTENERS */
-document.getElementById("orderType").addEventListener("change", () => {
-  const type = document.getElementById("orderType").value;
-  document.getElementById("addressField").style.display =
-    type === "Delivery" ? "block" : "none";
-  document.getElementById("deliveryField").style.display =
-    type === "Delivery" ? "block" : "none";
-  renderCart();
-});
-
-document.getElementById("deliveryFee").addEventListener("change", renderCart);
-
-/* INPUT ERROR HANDLING */
-function showError(id) {
-  const input = document.getElementById(id);
-  if (input) {
-    input.style.border = "2px solid red";
-    input.style.background = "#ffe5e5";
-  }
-}
-
-function clearError(id) {
-  const input = document.getElementById(id);
-  if (input) {
-    input.style.border = "";
-    input.style.background = "";
-  }
-}
-
-["name", "phone", "address", "orderDate", "orderTime", "itemNotes"].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener("input", () => clearError(id));
-});
-
-/* SAVE ORDER */
+/* ===============================
+   SAVE ORDER
+================================= */
 async function saveOrder() {
   const name = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
   const orderType = document.getElementById("orderType").value;
   const address = document.getElementById("address").value.trim();
   const payment = document.getElementById("payment").value;
-  const notes = document.getElementById("itemNotes")
-    ? document.getElementById("itemNotes").value.trim()
-    : "";
+  const notes = document.getElementById("itemNotes")?.value.trim() || "";
 
   let valid = true;
-  if (!name) { showError("name"); valid = false; }
-  if (cart.length === 0) {
-    document.getElementById("items").style.border = "2px solid red";
-    valid = false;
-  }
-  if (orderType === "Delivery" && !address) {
-    showError("address");
-    valid = false;
-  }
+  if (!name) valid = false;
+  if (cart.length === 0) valid = false;
+  if (orderType === "Delivery" && !address) valid = false;
 
   if (!valid) return;
 
   let subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
   const deliveryFee = orderType === "Delivery"
     ? Number(document.getElementById("deliveryFee").value)
     : 0;
@@ -143,7 +107,7 @@ async function saveOrder() {
 
   const itemsWithNotes = cart.map(item => ({
     ...item,
-    notes: notes
+    notes
   }));
 
   await fetch(`${API}/orders`, {
@@ -162,7 +126,6 @@ async function saveOrder() {
     })
   });
 
-  // RESET
   cart = [];
   document.getElementById("name").value = "";
   document.getElementById("phone").value = "";
@@ -173,17 +136,13 @@ async function saveOrder() {
     document.getElementById("itemNotes").value = "";
   }
 
-  document.getElementById("orderType").value = "Pickup";
-  document.getElementById("payment").value = "Cash";
-  document.getElementById("addressField").style.display = "none";
-  document.getElementById("deliveryField").style.display = "none";
-  document.getElementById("items").style.border = "";
-
   renderCart();
   loadOrders();
 }
 
-/* LOAD PENDING ORDERS */
+/* ===============================
+   LOAD PENDING ORDERS
+================================= */
 async function loadOrders() {
   try {
     const res = await fetch(`${API}/orders`);
@@ -192,18 +151,16 @@ async function loadOrders() {
     const pending = document.getElementById("pendingOrders");
     pending.innerHTML = "";
 
-    orders.sort((a, b) => {
-      if (!a.scheduled_at) return 1;
-      if (!b.scheduled_at) return -1;
-      return new Date(a.scheduled_at) - new Date(b.scheduled_at);
-    });
-
     orders.forEach(o => {
       if (o.status !== "Pending") return;
 
-      // ✅ FIXED TIME (NO SECONDS, NO SHIFT)
+      // ✅ FINAL TIME FIX (1:30 pm FORMAT)
       const time = o.scheduled_at
-        ? o.scheduled_at.split(" ")[1].slice(0, 5)
+        ? new Date(o.scheduled_at).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true
+          }).replace("AM", "am").replace("PM", "pm")
         : "ASAP";
 
       const location = o.order_type === "Delivery"
@@ -212,13 +169,8 @@ async function loadOrders() {
 
       const phone = o.phone || "No contact number";
 
-      const itemsDisplay = Array.isArray(o.items)
-        ? o.items.map(i => `${i.itemName} x${i.qty}`).join(", ")
-        : (o.items || "No items listed");
-
-      const notes = Array.isArray(o.items)
-        ? (o.items[0]?.notes || "None")
-        : "None";
+      // ✅ BACKEND RETURNS STRING
+      const itemsDisplay = o.items || "No items listed";
 
       pending.innerHTML += `
         <div class="order-card">
@@ -230,7 +182,6 @@ async function loadOrders() {
           <p>📞 <strong>Phone:</strong> ${phone}</p>
           <p>🛵 <strong>Type & Location:</strong> ${o.order_type} — ${location}</p>
           <p>🍱 <strong>Items:</strong> ${itemsDisplay}</p>
-          <p>📝 <strong>Notes:</strong> ${notes}</p>
           <p>💳 <strong>Payment:</strong> ${o.payment}</p>
           <p><strong>💰 ₱${Number(o.total).toFixed(2)}</strong></p>
 
@@ -244,23 +195,32 @@ async function loadOrders() {
   }
 }
 
-/* COMPLETE ORDER */
+/* ===============================
+   COMPLETE ORDER
+================================= */
 async function completeOrder(id) {
   await fetch(`${API}/orders/${id}`, { method: "PUT" });
   loadOrders();
 }
 
-/* INIT */
+/* ===============================
+   INIT
+================================= */
 loadMenu();
 loadOrders();
 renderCart();
 
+/* CLOCK */
 setInterval(() => {
   const el = document.getElementById("currentTime");
   if (el) {
-    el.innerText = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    el.innerText = new Date()
+      .toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      })
+      .replace("AM", "am")
+      .replace("PM", "pm");
   }
 }, 1000);
