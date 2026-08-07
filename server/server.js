@@ -11,7 +11,6 @@ app.use(express.json());
    DATABASE CONNECTION
 ================================= */
 
-
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "sakura.proxy.rlwy.net",
   user: process.env.DB_USER || "root",
@@ -158,7 +157,8 @@ app.post("/orders", (req, res) => {
           order_id,
           item_name,
           quantity,
-          price
+          price,
+          notes
         )
         VALUES ?
       `;
@@ -167,7 +167,8 @@ app.post("/orders", (req, res) => {
         orderId,
         i.itemName,
         i.qty,
-        i.price
+        i.price,
+        i.notes || ""
       ]);
 
       db.query(itemSql, [values], (err) => {
@@ -200,7 +201,8 @@ app.get("/orders", (req, res) => {
         CONCAT(
           order_items.item_name,
           ' x',
-          order_items.quantity
+          order_items.quantity,
+          IF(order_items.notes IS NOT NULL AND order_items.notes != '', CONCAT(' (Note: ', order_items.notes, ')'), '')
         )
         SEPARATOR ', '
       ) AS items
@@ -257,7 +259,8 @@ app.get("/sales", (req, res) => {
         CONCAT(
           order_items.item_name,
           ' x',
-          order_items.quantity
+          order_items.quantity,
+          IF(order_items.notes IS NOT NULL AND order_items.notes != '', CONCAT(' (Note: ', order_items.notes, ')'), '')
         )
         SEPARATOR ', '
       ) AS items

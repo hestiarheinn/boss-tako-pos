@@ -91,7 +91,7 @@ function clearError(id) {
   }
 }
 
-["name", "phone", "address", "orderDate", "orderTime"].forEach(id => {
+["name", "phone", "address", "orderDate", "orderTime", "itemNotes"].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener("input", () => clearError(id));
 });
@@ -103,6 +103,7 @@ async function saveOrder() {
   const orderType = document.getElementById("orderType").value;
   const address = document.getElementById("address").value.trim();
   const payment = document.getElementById("payment").value;
+  const notes = document.getElementById("itemNotes") ? document.getElementById("itemNotes").value.trim() : "";
 
   let valid = true;
   if (!name) { showError("name"); valid = false; }
@@ -119,19 +120,38 @@ async function saveOrder() {
   const time = document.getElementById("orderTime").value;
   const scheduledAt = (date && time) ? `${date} ${time}:00` : null;
 
+  // Attach notes to each item in the cart array
+  const itemsWithNotes = cart.map(item => ({
+    ...item,
+    notes: notes
+  }));
+
   await fetch(`${API}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, phone, orderType, address, deliveryFee, payment, total, items: cart, scheduledAt })
+    body: JSON.stringify({ 
+      name, 
+      phone, 
+      orderType, 
+      address, 
+      deliveryFee, 
+      payment, 
+      total, 
+      items: itemsWithNotes, 
+      scheduledAt 
+    })
   });
 
-  // Reset Input
+  // Reset Inputs
   cart = [];
   document.getElementById("name").value = "";
   document.getElementById("phone").value = "";
   document.getElementById("address").value = "";
   document.getElementById("orderDate").value = "";
   document.getElementById("orderTime").value = "";
+  if (document.getElementById("itemNotes")) {
+    document.getElementById("itemNotes").value = "";
+  }
   document.getElementById("orderType").value = "Pickup";
   document.getElementById("payment").value = "Cash";
   document.getElementById("addressField").style.display = "none";
